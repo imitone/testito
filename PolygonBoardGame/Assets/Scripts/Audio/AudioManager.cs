@@ -434,6 +434,75 @@ public class AudioManager : MonoBehaviour
         }
     }
     
+    // Methods needed by GameManager
+    public void PlayBackgroundMusic()
+    {
+        PlayMusic(backgroundMusic);
+    }
+    
+    public void PlayStateChangeSound(GameManager.GameState newState)
+    {
+        // Play appropriate sound based on state
+        switch (newState)
+        {
+            case GameManager.GameState.PlayerTurn:
+                PlaySFX(buttonClickSound);
+                break;
+            case GameManager.GameState.MiniGame:
+                PlaySFX(miniGameStartSound);
+                break;
+            case GameManager.GameState.GameOver:
+                PlaySFX(gameOverSound);
+                break;
+        }
+    }
+    
+    public void PlayDiceRoll()
+    {
+        PlaySFX(diceRollSound);
+    }
+    
+    public void PlayMoveSound()
+    {
+        PlaySFX(moveSound);
+    }
+    
+    public void PlayMoneySound()
+    {
+        PlaySFX(moneySound);
+    }
+    
+    public void PlayPurchaseSound()
+    {
+        PlaySFX(purchaseSound);
+    }
+    
+    public void PlayErrorSound()
+    {
+        PlaySFX(errorSound);
+    }
+    
+    public void PlaySellSound()
+    {
+        PlaySFX(sellSound);
+    }
+    
+    public void PlayRentSound()
+    {
+        PlaySFX(rentSound);
+    }
+    
+    public void PlayVictorySound()
+    {
+        PlaySFX(victorySound);
+    }
+    
+    public void PlayGameOverSound()
+    {
+        PlayMusic(gameOverMusic);
+        PlaySFX(gameOverSound);
+    }
+    
     void OnDestroy()
     {
         SaveAudioSettings();

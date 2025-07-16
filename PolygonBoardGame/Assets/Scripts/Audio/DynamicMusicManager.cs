@@ -541,7 +541,7 @@ public class DynamicMusicManager : MonoBehaviour
     
     #region Event Handlers
     
-    private void OnGameStateChanged(GameState newState)
+    private void OnGameStateChanged(GameManager.GameState newState)
     {
         MusicState musicState = ConvertGameStateToMusicState(newState);
         PlayMusicForState(musicState);
@@ -549,13 +549,14 @@ public class DynamicMusicManager : MonoBehaviour
         // Adjust intensity based on game state
         switch (newState)
         {
-            case GameState.Playing:
+            case GameManager.GameState.Playing:
+            case GameManager.GameState.PlayerTurn:
                 SetIntensity(0.6f);
                 break;
-            case GameState.MiniGame:
+            case GameManager.GameState.MiniGame:
                 SetIntensity(0.9f);
                 break;
-            case GameState.GameOver:
+            case GameManager.GameState.GameOver:
                 SetIntensity(0.3f);
                 break;
             default:
@@ -570,29 +571,30 @@ public class DynamicMusicManager : MonoBehaviour
         SetIntensity(0.7f);
     }
     
-    private void OnMiniGameStarted(MiniGameType gameType)
+    private void OnMiniGameStarted(GameManager.MiniGameType gameType)
     {
         PlayMusicForState(MusicState.MiniGame);
         SetIntensity(1f);
     }
     
-    private void OnMiniGameEnded(MiniGameType gameType, int winnerId)
+    private void OnMiniGameEnded(GameManager.MiniGameType gameType, int winnerId)
     {
-        PlayMusicForState(MusicState.Playing);
+        PlayMusicForState(MusicState.Gameplay);
         SetIntensity(0.6f);
     }
     
-    private MusicState ConvertGameStateToMusicState(GameState gameState)
+    private MusicState ConvertGameStateToMusicState(GameManager.GameState gameState)
     {
         switch (gameState)
         {
-            case GameState.Menu:
+            case GameManager.GameState.MainMenu:
                 return MusicState.Menu;
-            case GameState.Playing:
+            case GameManager.GameState.Playing:
+            case GameManager.GameState.PlayerTurn:
                 return MusicState.Gameplay;
-            case GameState.MiniGame:
+            case GameManager.GameState.MiniGame:
                 return MusicState.MiniGame;
-            case GameState.GameOver:
+            case GameManager.GameState.GameOver:
                 return MusicState.Victory;
             default:
                 return MusicState.Menu;

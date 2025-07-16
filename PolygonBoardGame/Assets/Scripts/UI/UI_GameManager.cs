@@ -5,6 +5,8 @@ using System.Collections;
 
 public class UI_GameManager : MonoBehaviour
 {
+    public static UI_GameManager Instance { get; private set; }
+    
     [Header("UI Panels")]
     public GameObject mainMenuPanel;
     public GameObject gameHUD;
@@ -39,6 +41,18 @@ public class UI_GameManager : MonoBehaviour
     [Header("Score Elements")]
     public Transform scoreContent;
     public GameObject playerScorePrefab;
+    
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
     
     void Start()
     {
@@ -287,6 +301,21 @@ public class UI_GameManager : MonoBehaviour
     void ShowPlayerTurn()
     {
         // Show player turn UI is handled in ShowPlayerTurnUI
+    }
+    
+    // Method needed by NetworkManager
+    public void UpdatePlayerList(System.Collections.Generic.Dictionary<ulong, NetworkManager.PlayerData> playerDataDict)
+    {
+        Debug.Log($"Updating player list with {playerDataDict.Count} players");
+        // Update UI to show network players
+        // This would typically update a lobby UI or similar
+    }
+    
+    // Method needed by GameManager
+    public void ShowGameOverScreen()
+    {
+        ShowScorePanel();
+        ShowMessage("Game Over!");
     }
 }
 

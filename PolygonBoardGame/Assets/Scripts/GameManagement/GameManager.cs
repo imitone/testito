@@ -40,6 +40,24 @@ public class GameManager : MonoBehaviour
     private bool gameEnded = false;
     private Coroutine gameTimer;
     
+    // Enums needed by other systems
+    public enum GameEndReason
+    {
+        Victory,
+        Elimination,
+        TimeLimit,
+        Forfeit
+    }
+    
+    public enum MiniGameType
+    {
+        Race,
+        Memory,
+        Platform,
+        Color,
+        Polygon
+    }
+    
     public enum GameState
     {
         MainMenu,
@@ -50,13 +68,27 @@ public class GameManager : MonoBehaviour
         PropertyDecision,
         MiniGame,
         GameOver,
-        Paused
+        Paused,
+        WaitingForPlayers,
+        Playing
     }
     
+    // Events
     public System.Action<GameState> OnGameStateChanged;
     public System.Action<Player> OnPlayerTurnChanged;
     public System.Action<int> OnRoundChanged;
     public System.Action<Player> OnGameWon;
+    
+    // Additional events needed by other systems
+    public System.Action OnGameStarted;
+    public System.Action<int, GameEndReason> OnGameEnded;
+    public System.Action<int> OnPlayerTurnChanged;
+    public System.Action<int, BoardSpace> OnPropertyBought;
+    public System.Action<int, BoardSpace> OnPropertySold;
+    public System.Action<MiniGameType> OnMiniGameStarted;
+    public System.Action<MiniGameType, int> OnMiniGameEnded;
+    public System.Action<int, int> OnDiceRolled;
+    public System.Action<int> OnPlayerBankrupt;
     
     void Awake()
     {
@@ -104,6 +136,10 @@ public class GameManager : MonoBehaviour
         CreatePlayers();
         SetupPlayerRanking();
         SetGameState(GameState.PlayerTurn);
+        
+        // Trigger game started event
+        OnGameStarted?.Invoke();
+        gameStarted = true;
         
         // Start game timer
         gameTimer = StartCoroutine(GameTimer());
@@ -733,6 +769,139 @@ public class GameManager : MonoBehaviour
         {
             SetGameState(GameState.Paused);
         }
+    }
+    
+    // Additional methods needed by other systems
+    
+    // Network methods
+    public void StartNetworkGame()
+    {
+        Debug.Log("Starting network game");
+        StartGame();
+    }
+    
+    public void ProcessNetworkDiceRoll(int diceResult, ulong playerId)
+    {
+        Debug.Log($"Processing network dice roll: {diceResult} for player {playerId}");
+        // Handle network dice roll
+    }
+    
+    public void ProcessNetworkPropertyAction(int spaceIndex, PropertyAction action, ulong playerId)
+    {
+        Debug.Log($"Processing network property action: {action} on space {spaceIndex} for player {playerId}");
+        // Handle network property action
+    }
+    
+    public void SyncNetworkPlayerData(NetworkManager.PlayerData playerData)
+    {
+        Debug.Log($"Syncing network player data for player {playerData.playerId}");
+        // Handle network player data sync
+    }
+    
+    public void HandlePlayerDisconnection(ulong disconnectedPlayerId)
+    {
+        Debug.Log($"Handling player disconnection: {disconnectedPlayerId}");
+        // Handle player disconnection
+    }
+    
+    // Property-related methods
+    public void BuyProperty(int playerId, BoardSpace property)
+    {
+        OnPropertyBought?.Invoke(playerId, property);
+        totalPropertiesBought++;
+    }
+    
+    public void SellProperty(int playerId, BoardSpace property)
+    {
+        OnPropertySold?.Invoke(playerId, property);
+    }
+    
+    public void StartMiniGame(MiniGameType gameType)
+    {
+        OnMiniGameStarted?.Invoke(gameType);
+        SetGameState(GameState.MiniGame);
+    }
+    
+    public void EndMiniGame(MiniGameType gameType, int winnerId)
+    {
+        OnMiniGameEnded?.Invoke(gameType, winnerId);
+        SetGameState(GameState.PlayerTurn);
+    }
+    
+    public void PlayerBankrupt(int playerId)
+    {
+        OnPlayerBankrupt?.Invoke(playerId);
+        
+        // Remove player from game
+        if (playerId >= 0 && playerId < players.Count)
+        {
+            players.RemoveAt(playerId);
+            
+            // Check if game should end
+            if (players.Count <= 1)
+            {
+                EndGame(GameEndReason.Elimination);
+            }
+        }
+    }
+    
+    public void EndGame(GameEndReason reason)
+    {
+        if (gameEnded) return;
+        
+        gameEnded = true;
+        gameEndTime = Time.time;
+        
+        // Determine winner
+        int winnerId = 0;
+        if (players.Count > 0)
+        {
+            // Find player with highest net worth
+            Player winner = players.OrderByDescending(p => p.GetNetWorth()).FirstOrDefault();
+            winnerId = winner != null ? winner.playerId : 0;
+        }
+        
+        // Trigger game ended event
+        OnGameEnded?.Invoke(winnerId, reason);
+        
+        SetGameState(GameState.GameOver);
+    }
+    
+    public void StartGame()
+    {
+        if (!gameStarted)
+        {
+            InitializeGame();
+        }
+    }
+    
+    public void NextPlayer()
+    {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
+        
+        // Check if we've completed a round
+        if (currentPlayerIndex == 0)
+        {
+            currentRound++;
+            OnRoundChanged?.Invoke(currentRound);
+            
+            // Check for round limit
+            if (currentRound > maxRounds)
+            {
+                EndGame(GameEndReason.TimeLimit);
+                return;
+            }
+        }
+        
+        // Trigger player turn changed events
+        Player currentPlayer = GetCurrentPlayer();
+        if (currentPlayer != null)
+        {
+            OnPlayerTurnChanged?.Invoke(currentPlayer);
+            OnPlayerTurnChanged?.Invoke(currentPlayer.playerId);
+        }
+        
+        SetGameState(GameState.PlayerTurn);
     }
     
     void OnDestroy()

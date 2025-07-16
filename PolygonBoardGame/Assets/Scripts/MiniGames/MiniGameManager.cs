@@ -4,6 +4,8 @@ using System.Collections;
 
 public class MiniGameManager : MonoBehaviour
 {
+    public static MiniGameManager Instance { get; private set; }
+    
     [Header("Mini Game Settings")]
     public List<MiniGameData> availableMinigames = new List<MiniGameData>();
     public Transform minigameParent;
@@ -25,6 +27,18 @@ public class MiniGameManager : MonoBehaviour
         public int minPlayers = 1;
         public int maxPlayers = 4;
         public float duration = 30f;
+    }
+    
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
     
     void Start()
@@ -241,5 +255,18 @@ public class MiniGameManager : MonoBehaviour
             return availableMinigames[Random.Range(0, availableMinigames.Count)].gameName;
         }
         return "Unknown Game";
+    }
+    
+    // Method needed by NetworkManager
+    public void StartNetworkMiniGame(GameManager.MiniGameType gameType, ulong[] participants)
+    {
+        Debug.Log($"Starting network mini-game: {gameType} with {participants.Length} participants");
+        
+        // Convert network participants to players
+        List<Player> networkPlayers = new List<Player>();
+        // In a real implementation, you'd convert ulong IDs to actual Player objects
+        
+        // Start the mini-game
+        StartMiniGame(networkPlayers);
     }
 }
