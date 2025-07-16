@@ -95,7 +95,7 @@ public class DynamicMusicManager : MonoBehaviour
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnGameStateChanged += OnGameStateChanged;
-            GameManager.Instance.OnPlayerTurnChanged += OnPlayerTurnChanged;
+            GameManager.Instance.OnPlayerTurnChangedById += OnPlayerTurnChanged;
             GameManager.Instance.OnMiniGameStarted += OnMiniGameStarted;
             GameManager.Instance.OnMiniGameEnded += OnMiniGameEnded;
         }

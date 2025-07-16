@@ -263,7 +263,7 @@ public class AchievementSystem : MonoBehaviour
         {
             GameManager.Instance.OnGameStarted += OnGameStarted;
             GameManager.Instance.OnGameEnded += OnGameEnded;
-            GameManager.Instance.OnPlayerTurnChanged += OnPlayerTurnChanged;
+            GameManager.Instance.OnPlayerTurnChangedById += OnPlayerTurnChanged;
             GameManager.Instance.OnPropertyBought += OnPropertyBought;
             GameManager.Instance.OnPropertySold += OnPropertySold;
             GameManager.Instance.OnMiniGameStarted += OnMiniGameStarted;
@@ -435,7 +435,7 @@ public class AchievementSystem : MonoBehaviour
         IncrementProgress("play_100_games");
     }
     
-    private void OnGameEnded(int winnerId, GameEndReason reason)
+    private void OnGameEnded(int winnerId, GameManager.GameEndReason reason)
     {
         if (winnerId == 0) // Human player won
         {
@@ -447,7 +447,7 @@ public class AchievementSystem : MonoBehaviour
         }
         
         // Update play time
-        float gameTime = Time.time - GameManager.Instance.gameStartTime;
+        float gameTime = Time.time - (GameManager.Instance != null ? GameManager.Instance.gameStartTime : 0);
         UpdateProgress("marathon_player", (int)(saveData.playerStats.totalPlayTime + gameTime));
         
         if (gameTime < 15 * 60) // Less than 15 minutes
@@ -465,7 +465,7 @@ public class AchievementSystem : MonoBehaviour
     {
         if (playerId == 0) // Human player
         {
-            IncrementProgress("big_spender", property.purchasePrice);
+            IncrementProgress("big_spender", property.price);
             IncrementProgress("property_tycoon");
         }
     }
@@ -478,12 +478,12 @@ public class AchievementSystem : MonoBehaviour
         }
     }
     
-    private void OnMiniGameStarted(MiniGameType gameType)
+    private void OnMiniGameStarted(GameManager.MiniGameType gameType)
     {
         IncrementProgress("friendly_challenger");
     }
     
-    private void OnMiniGameEnded(MiniGameType gameType, int winnerId)
+    private void OnMiniGameEnded(GameManager.MiniGameType gameType, int winnerId)
     {
         if (winnerId == 0) // Human player won
         {
@@ -528,17 +528,17 @@ public class AchievementSystem : MonoBehaviour
         // Implementation depends on game persistence
     }
     
-    private void CheckMiniGameAchievements(MiniGameType gameType)
+    private void CheckMiniGameAchievements(GameManager.MiniGameType gameType)
     {
         switch (gameType)
         {
-            case MiniGameType.Memory:
+            case GameManager.MiniGameType.Memory:
                 // Check for perfect memory achievement
                 break;
-            case MiniGameType.Race:
+            case GameManager.MiniGameType.Race:
                 // Check for speed demon achievement
                 break;
-            case MiniGameType.Platform:
+            case GameManager.MiniGameType.Platform:
                 // Check for platform master achievement
                 break;
         }

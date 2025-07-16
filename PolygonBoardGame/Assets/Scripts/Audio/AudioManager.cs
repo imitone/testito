@@ -434,73 +434,69 @@ public class AudioManager : MonoBehaviour
         }
     }
     
-    // Methods needed by GameManager
-    public void PlayBackgroundMusic()
-    {
-        PlayMusic(backgroundMusic);
-    }
-    
+    // Additional audio methods for GameManager compatibility
     public void PlayStateChangeSound(GameManager.GameState newState)
     {
         // Play appropriate sound based on state
         switch (newState)
         {
             case GameManager.GameState.PlayerTurn:
-                PlaySFX(buttonClickSound);
+                PlaySFX("buttonClickSound");
                 break;
             case GameManager.GameState.MiniGame:
-                PlaySFX(miniGameStartSound);
+                PlaySFX("miniGameStartSound");
                 break;
             case GameManager.GameState.GameOver:
-                PlaySFX(gameOverSound);
+                PlaySFX("gameOverSound");
                 break;
         }
     }
     
     public void PlayDiceRoll()
     {
-        PlaySFX(diceRollSound);
-    }
-    
-    public void PlayMoveSound()
-    {
-        PlaySFX(moveSound);
-    }
-    
-    public void PlayMoneySound()
-    {
-        PlaySFX(moneySound);
-    }
-    
-    public void PlayPurchaseSound()
-    {
-        PlaySFX(purchaseSound);
-    }
-    
-    public void PlayErrorSound()
-    {
-        PlaySFX(errorSound);
-    }
-    
-    public void PlaySellSound()
-    {
-        PlaySFX(sellSound);
-    }
-    
-    public void PlayRentSound()
-    {
-        PlaySFX(rentSound);
-    }
-    
-    public void PlayVictorySound()
-    {
-        PlaySFX(victorySound);
+        PlaySFX("diceRollSound");
     }
     
     public void PlayGameOverSound()
     {
-        PlayMusic(gameOverMusic);
-        PlaySFX(gameOverSound);
+        PlayGameOverMusic();
+        PlaySFX("gameOverSound");
+    }
+    
+    // Additional methods needed by GameManager
+    public void PlayMoveSound()
+    {
+        PlaySFX("moveSound");
+    }
+    
+    public void PlayMoneySound()
+    {
+        PlaySFX("moneySound");
+    }
+    
+    public void PlayPurchaseSound()
+    {
+        PlaySFX("purchaseSound");
+    }
+    
+    public void PlayErrorSound()
+    {
+        PlaySFX("errorSound");
+    }
+    
+    public void PlaySellSound()
+    {
+        PlaySFX("sellSound");
+    }
+    
+    public void PlayRentSound()
+    {
+        PlaySFX("rentSound");
+    }
+    
+    public void PlayVictorySound()
+    {
+        PlaySFX("victorySound");
     }
     
     void OnDestroy()

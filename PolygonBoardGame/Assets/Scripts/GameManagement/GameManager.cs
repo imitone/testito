@@ -82,7 +82,7 @@ public class GameManager : MonoBehaviour
     // Additional events needed by other systems
     public System.Action OnGameStarted;
     public System.Action<int, GameEndReason> OnGameEnded;
-    public System.Action<int> OnPlayerTurnChanged;
+    public System.Action<int> OnPlayerTurnChangedById;
     public System.Action<int, BoardSpace> OnPropertyBought;
     public System.Action<int, BoardSpace> OnPropertySold;
     public System.Action<MiniGameType> OnMiniGameStarted;
@@ -898,7 +898,7 @@ public class GameManager : MonoBehaviour
         if (currentPlayer != null)
         {
             OnPlayerTurnChanged?.Invoke(currentPlayer);
-            OnPlayerTurnChanged?.Invoke(currentPlayer.playerId);
+            OnPlayerTurnChangedById?.Invoke(currentPlayer.playerId);
         }
         
         SetGameState(GameState.PlayerTurn);
@@ -910,6 +910,7 @@ public class GameManager : MonoBehaviour
         OnPlayerTurnChanged = null;
         OnRoundChanged = null;
         OnGameWon = null;
+        OnPlayerTurnChangedById = null;
     }
 }
 
