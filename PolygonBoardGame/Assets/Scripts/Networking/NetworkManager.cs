@@ -1,10 +1,8 @@
-using Unity.Netcode;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
-using Unity.Netcode.Transports.UTP;
 
-public class NetworkManager : NetworkBehaviour
+public class NetworkManager : MonoBehaviour
 {
     public static NetworkManager Instance { get; private set; }
     
@@ -25,21 +23,20 @@ public class NetworkManager : NetworkBehaviour
     public Dictionary<ulong, PlayerData> playerDataDict = new Dictionary<ulong, PlayerData>();
     
     [Header("Game Sync")]
-    public NetworkVariable<GameState> networkGameState = new NetworkVariable<GameState>(GameState.WaitingForPlayers);
-    public NetworkVariable<int> networkCurrentPlayer = new NetworkVariable<int>(0);
-    public NetworkVariable<int> networkCurrentRound = new NetworkVariable<int>(1);
+    public GameManager.GameState networkGameState = GameManager.GameState.WaitingForPlayers;
+    public int networkCurrentPlayer = 0;
+    public int networkCurrentRound = 1;
     
     [Header("Events")]
     public System.Action<ulong> OnPlayerConnected;
     public System.Action<ulong> OnPlayerDisconnected;
-    public System.Action<GameState> OnGameStateChanged;
+    public System.Action<GameManager.GameState> OnGameStateChanged;
     
-    private Unity.Netcode.NetworkManager netManager;
-    private UnityTransport transport;
+    private bool networkInitialized = false;
     private Coroutine reconnectCoroutine;
     
     [System.Serializable]
-    public class PlayerData : INetworkSerializable
+    public class PlayerData
     {
         public ulong clientId;
         public string playerName;
@@ -48,14 +45,14 @@ public class NetworkManager : NetworkBehaviour
         public int currentSpace;
         public bool isReady;
         
-        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        public PlayerData()
         {
-            serializer.SerializeValue(ref clientId);
-            serializer.SerializeValue(ref playerName);
-            serializer.SerializeValue(ref playerColor);
-            serializer.SerializeValue(ref money);
-            serializer.SerializeValue(ref currentSpace);
-            serializer.SerializeValue(ref isReady);
+            clientId = 0;
+            playerName = "Player";
+            playerColor = 0;
+            money = 1500;
+            currentSpace = 0;
+            isReady = false;
         }
     }
     
@@ -75,65 +72,49 @@ public class NetworkManager : NetworkBehaviour
     
     void InitializeNetworking()
     {
-        netManager = GetComponent<Unity.Netcode.NetworkManager>();
-        transport = GetComponent<UnityTransport>();
-        
-        if (netManager != null)
-        {
-            netManager.OnClientConnectedCallback += OnClientConnected;
-            netManager.OnClientDisconnectCallback += OnClientDisconnected;
-            netManager.OnServerStarted += OnServerStarted;
-        }
-        
-        networkGameState.OnValueChanged += OnNetworkGameStateChanged;
+        // Initialize networking system (simplified version)
+        networkInitialized = true;
+        Debug.Log("Network Manager initialized (Local Mode)");
     }
     
     #region Server/Host Methods
     
     public bool StartHost()
     {
-        if (netManager == null) return false;
+        if (!networkInitialized) return false;
         
-        transport.SetConnectionData(serverIP, serverPort);
-        bool result = netManager.StartHost();
+        isHost = true;
+        isClient = true;
+        roomCode = GenerateRoomCode();
         
-        if (result)
-        {
-            isHost = true;
-            isClient = true;
-            roomCode = GenerateRoomCode();
-            Debug.Log($"Host started successfully! Room Code: {roomCode}");
-        }
+        // Simulate host starting
+        networkGameState = GameManager.GameState.WaitingForPlayers;
         
-        return result;
+        Debug.Log($"Host started successfully! Room Code: {roomCode}");
+        return true;
     }
     
     public bool StartServer()
     {
-        if (netManager == null) return false;
+        if (!networkInitialized) return false;
         
-        transport.SetConnectionData(serverIP, serverPort);
-        bool result = netManager.StartServer();
+        isHost = true;
+        roomCode = GenerateRoomCode();
         
-        if (result)
-        {
-            isHost = true;
-            roomCode = GenerateRoomCode();
-            Debug.Log($"Server started successfully! Room Code: {roomCode}");
-        }
+        // Simulate server starting
+        networkGameState = GameManager.GameState.WaitingForPlayers;
         
-        return result;
+        Debug.Log($"Server started successfully! Room Code: {roomCode}");
+        return true;
     }
     
     public void StopHost()
     {
-        if (netManager != null && netManager.IsHost)
-        {
-            netManager.Shutdown();
-            isHost = false;
-            isClient = false;
-            ClearPlayerData();
-        }
+        isHost = false;
+        isClient = false;
+        ClearPlayerData();
+        
+        Debug.Log("Host stopped");
     }
     
     #endregion
@@ -142,58 +123,54 @@ public class NetworkManager : NetworkBehaviour
     
     public bool StartClient(string targetIP = "", ushort targetPort = 0)
     {
-        if (netManager == null) return false;
+        if (!networkInitialized) return false;
         
         if (!string.IsNullOrEmpty(targetIP))
             serverIP = targetIP;
         if (targetPort > 0)
             serverPort = targetPort;
         
-        transport.SetConnectionData(serverIP, serverPort);
-        bool result = netManager.StartClient();
+        isClient = true;
         
-        if (result)
-        {
-            isClient = true;
-            Debug.Log($"Connecting to server at {serverIP}:{serverPort}");
-        }
+        // Simulate client connection
+        StartCoroutine(SimulateClientConnection());
         
-        return result;
+        Debug.Log($"Connecting to server at {serverIP}:{serverPort}");
+        return true;
+    }
+    
+    private IEnumerator SimulateClientConnection()
+    {
+        yield return new WaitForSeconds(1f);
+        
+        // Simulate successful connection
+        ulong clientId = (ulong)Random.Range(1000, 9999);
+        SimulateClientConnected(clientId);
     }
     
     public bool JoinRoom(string code)
     {
-        // In a full implementation, this would connect to a matchmaking service
-        // For now, we'll use direct IP connection
         roomCode = code;
         return StartClient();
     }
     
     public void DisconnectClient()
     {
-        if (netManager != null && netManager.IsClient)
-        {
-            netManager.Shutdown();
-            isClient = false;
-            ClearPlayerData();
-        }
+        isClient = false;
+        ClearPlayerData();
+        
+        Debug.Log("Client disconnected");
     }
     
     #endregion
     
-    #region Network Callbacks
+    #region Network Simulation
     
-    private void OnServerStarted()
+    private void SimulateClientConnected(ulong clientId)
     {
-        Debug.Log("Server started successfully!");
-        networkGameState.Value = GameState.WaitingForPlayers;
-    }
-    
-    private void OnClientConnected(ulong clientId)
-    {
-        Debug.Log($"Client {clientId} connected");
+        Debug.Log($"Client {clientId} connected (simulated)");
         
-        if (IsServer)
+        if (isHost)
         {
             // Add player data for the new client
             PlayerData newPlayer = new PlayerData
@@ -201,128 +178,102 @@ public class NetworkManager : NetworkBehaviour
                 clientId = clientId,
                 playerName = $"Player {clientId}",
                 playerColor = (int)clientId % 4,
-                money = GameManager.Instance.startingMoney,
+                money = GameManager.Instance != null ? GameManager.Instance.startingMoney : 1500,
                 currentSpace = 0,
                 isReady = false
             };
             
             playerDataDict[clientId] = newPlayer;
-            UpdatePlayerListClientRpc();
+            UpdatePlayerList();
             
-            // Check if we can start the game
-            if (connectedPlayers.Count >= 2 && AllPlayersReady())
-            {
-                StartGameClientRpc();
-            }
+            OnPlayerConnected?.Invoke(clientId);
         }
-        
-        OnPlayerConnected?.Invoke(clientId);
     }
     
-    private void OnClientDisconnected(ulong clientId)
+    private void SimulateClientDisconnected(ulong clientId)
     {
-        Debug.Log($"Client {clientId} disconnected");
+        Debug.Log($"Client {clientId} disconnected (simulated)");
         
-        if (IsServer)
+        if (isHost)
         {
             if (playerDataDict.ContainsKey(clientId))
             {
                 playerDataDict.Remove(clientId);
-                UpdatePlayerListClientRpc();
-            }
-            
-            // Handle player disconnection during game
-            if (networkGameState.Value == GameState.Playing)
-            {
-                HandlePlayerDisconnectionClientRpc(clientId);
+                UpdatePlayerList();
             }
         }
         
         OnPlayerDisconnected?.Invoke(clientId);
     }
     
-    private void OnNetworkGameStateChanged(GameState previous, GameState current)
-    {
-        Debug.Log($"Game state changed from {previous} to {current}");
-        OnGameStateChanged?.Invoke(current);
-    }
-    
     #endregion
     
     #region Game Synchronization
     
-    [ServerRpc(RequireOwnership = false)]
-    public void SetPlayerReadyServerRpc(bool ready, ServerRpcParams serverRpcParams = default)
+    public void SetPlayerReady(bool ready)
     {
-        ulong clientId = serverRpcParams.Receive.SenderClientId;
+        ulong clientId = 0; // In a real implementation, this would be the actual client ID
         
         if (playerDataDict.ContainsKey(clientId))
         {
             playerDataDict[clientId].isReady = ready;
-            UpdatePlayerListClientRpc();
+            UpdatePlayerList();
             
             if (AllPlayersReady() && connectedPlayers.Count >= 2)
             {
-                StartGameClientRpc();
+                StartGame();
             }
         }
     }
     
-    [ServerRpc(RequireOwnership = false)]
-    public void UpdatePlayerDataServerRpc(PlayerData playerData, ServerRpcParams serverRpcParams = default)
+    public void UpdatePlayerData(PlayerData playerData)
     {
-        ulong clientId = serverRpcParams.Receive.SenderClientId;
+        ulong clientId = playerData.clientId;
         
         if (playerDataDict.ContainsKey(clientId))
         {
             playerDataDict[clientId] = playerData;
-            SyncPlayerDataClientRpc(playerData);
+            SyncPlayerData(playerData);
         }
     }
     
-    [ServerRpc(RequireOwnership = false)]
-    public void RequestDiceRollServerRpc(ServerRpcParams serverRpcParams = default)
+    public void RequestDiceRoll()
     {
-        ulong clientId = serverRpcParams.Receive.SenderClientId;
+        ulong clientId = 0; // In a real implementation, this would be the actual client ID
         
-        if (clientId == (ulong)networkCurrentPlayer.Value)
+        if (clientId == (ulong)networkCurrentPlayer)
         {
             int diceResult = Random.Range(1, 7);
-            ProcessDiceRollClientRpc(diceResult, clientId);
+            ProcessDiceRoll(diceResult, clientId);
         }
     }
     
-    [ServerRpc(RequireOwnership = false)]
-    public void ProcessPropertyActionServerRpc(int spaceIndex, PropertyAction action, ServerRpcParams serverRpcParams = default)
+    public void ProcessPropertyAction(int spaceIndex, PropertyAction action)
     {
-        ulong clientId = serverRpcParams.Receive.SenderClientId;
-        ProcessPropertyActionClientRpc(spaceIndex, action, clientId);
+        ulong clientId = 0; // In a real implementation, this would be the actual client ID
+        ProcessPropertyActionForPlayer(spaceIndex, action, clientId);
     }
     
-    [ServerRpc(RequireOwnership = false)]
-    public void StartMiniGameServerRpc(MiniGameType gameType, ulong[] participants, ServerRpcParams serverRpcParams = default)
+    public void StartMiniGame(GameManager.MiniGameType gameType, ulong[] participants)
     {
-        StartMiniGameClientRpc(gameType, participants);
+        StartMiniGameForPlayers(gameType, participants);
     }
     
     #endregion
     
-    #region Client RPCs
+    #region Local Methods
     
-    [ClientRpc]
-    private void UpdatePlayerListClientRpc()
+    private void UpdatePlayerList()
     {
-        // Update UI with current player list
         if (UI_GameManager.Instance != null)
         {
             UI_GameManager.Instance.UpdatePlayerList(playerDataDict);
         }
     }
     
-    [ClientRpc]
-    private void StartGameClientRpc()
+    private void StartGame()
     {
-        networkGameState.Value = GameState.Playing;
+        networkGameState = GameManager.GameState.Playing;
         
         if (GameManager.Instance != null)
         {
@@ -330,8 +281,7 @@ public class NetworkManager : NetworkBehaviour
         }
     }
     
-    [ClientRpc]
-    private void ProcessDiceRollClientRpc(int diceResult, ulong playerId)
+    private void ProcessDiceRoll(int diceResult, ulong playerId)
     {
         if (GameManager.Instance != null)
         {
@@ -339,8 +289,7 @@ public class NetworkManager : NetworkBehaviour
         }
     }
     
-    [ClientRpc]
-    private void ProcessPropertyActionClientRpc(int spaceIndex, PropertyAction action, ulong playerId)
+    private void ProcessPropertyActionForPlayer(int spaceIndex, PropertyAction action, ulong playerId)
     {
         if (GameManager.Instance != null)
         {
@@ -348,8 +297,7 @@ public class NetworkManager : NetworkBehaviour
         }
     }
     
-    [ClientRpc]
-    private void StartMiniGameClientRpc(MiniGameType gameType, ulong[] participants)
+    private void StartMiniGameForPlayers(GameManager.MiniGameType gameType, ulong[] participants)
     {
         if (MiniGameManager.Instance != null)
         {
@@ -357,8 +305,7 @@ public class NetworkManager : NetworkBehaviour
         }
     }
     
-    [ClientRpc]
-    private void SyncPlayerDataClientRpc(PlayerData playerData)
+    private void SyncPlayerData(PlayerData playerData)
     {
         if (GameManager.Instance != null)
         {
@@ -366,8 +313,7 @@ public class NetworkManager : NetworkBehaviour
         }
     }
     
-    [ClientRpc]
-    private void HandlePlayerDisconnectionClientRpc(ulong disconnectedPlayerId)
+    private void HandlePlayerDisconnection(ulong disconnectedPlayerId)
     {
         if (GameManager.Instance != null)
         {
@@ -462,15 +408,24 @@ public class NetworkManager : NetworkBehaviour
     
     #endregion
     
+    // Test methods for local multiplayer simulation
+    public void SimulateLocalMultiplayer()
+    {
+        if (!IsNetworkGame())
+        {
+            StartHost();
+            
+            // Add simulated players
+            for (int i = 1; i <= 3; i++)
+            {
+                ulong clientId = (ulong)(1000 + i);
+                SimulateClientConnected(clientId);
+            }
+        }
+    }
+    
     void OnDestroy()
     {
-        if (netManager != null)
-        {
-            netManager.OnClientConnectedCallback -= OnClientConnected;
-            netManager.OnClientDisconnectCallback -= OnClientDisconnected;
-            netManager.OnServerStarted -= OnServerStarted;
-        }
-        
         if (reconnectCoroutine != null)
         {
             StopCoroutine(reconnectCoroutine);
@@ -485,26 +440,25 @@ public enum PropertyAction
     Challenge
 }
 
-public class NetworkPlayer : NetworkBehaviour
+public class NetworkPlayer : MonoBehaviour
 {
-    public NetworkVariable<ulong> playerId = new NetworkVariable<ulong>();
-    public NetworkVariable<int> playerMoney = new NetworkVariable<int>();
-    public NetworkVariable<int> currentSpace = new NetworkVariable<int>();
-    public NetworkVariable<bool> isMyTurn = new NetworkVariable<bool>();
+    public ulong playerId;
+    public int playerMoney;
+    public int currentSpace;
+    public bool isMyTurn;
     
-    public override void OnNetworkSpawn()
+    public void Initialize(ulong id)
     {
-        if (IsOwner)
-        {
-            playerId.Value = NetworkManager.Singleton.LocalClientId;
-        }
+        playerId = id;
+        playerMoney = 1500;
+        currentSpace = 0;
+        isMyTurn = false;
     }
     
-    [ServerRpc]
-    public void UpdatePlayerStateServerRpc(int money, int space, bool turn)
+    public void UpdatePlayerState(int money, int space, bool turn)
     {
-        playerMoney.Value = money;
-        currentSpace.Value = space;
-        isMyTurn.Value = turn;
+        playerMoney = money;
+        currentSpace = space;
+        isMyTurn = turn;
     }
 }
